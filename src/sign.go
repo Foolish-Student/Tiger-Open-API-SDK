@@ -43,7 +43,7 @@ func buildSignContent(params map[string]interface{}) (string, error) {
 	return b.String(), nil
 }
 
-// marshalWithSpaces encodes json and adds spaces after ':' and ',' to mirror python's json.dumps defaults.
+// marshalWithSpaces 将 JSON 编码，并在 ':' 和 ',' 后添加空格，以对齐 python 的 json.dumps 默认格式。
 func marshalWithSpaces(v interface{}) (string, error) {
 	raw, err := json.Marshal(v)
 	if err != nil {
@@ -95,7 +95,7 @@ func signSHA1WithRSA(privateKey *rsa.PrivateKey, content []byte) (string, error)
 	return base64.StdEncoding.EncodeToString(signature), nil
 }
 
-// marshalDeterministic produces JSON with sorted map keys and no HTML escaping, matching python's sort_keys + compact separators.
+// marshalDeterministic 生成按键排序、未转义 HTML 的 JSON，行为与 python 的 sort_keys + 紧凑分隔符一致。
 func marshalDeterministic(v interface{}) (string, error) {
 	var b strings.Builder
 	if err := writeDeterministic(&b, v); err != nil {
@@ -142,7 +142,7 @@ func writeDeterministic(b *strings.Builder, v interface{}) error {
 	case nil:
 		b.WriteString("null")
 	default:
-		// handle slices that are not []interface{}
+		// 处理非 []interface{} 的切片
 		rv := reflect.ValueOf(v)
 		if rv.IsValid() && rv.Kind() == reflect.Slice {
 			tmp := make([]interface{}, rv.Len())

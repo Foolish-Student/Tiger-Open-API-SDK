@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-// APIResponse mirrors tiger response envelope.
+// APIResponse 映射老虎返回的响应包结构。
 type APIResponse struct {
 	Code    int             `json:"code"`
 	Message string          `json:"message"`
@@ -14,12 +14,12 @@ type APIResponse struct {
 	Sign    string          `json:"sign"`
 }
 
-// Success reports whether code == 0.
+// Success 表示返回码是否为 0。
 func (r APIResponse) Success() bool {
 	return r.Code == 0
 }
 
-// NormalizeData converts string payloads into raw JSON for easier decoding.
+// NormalizeData 将字符串载荷转为原始 JSON，便于解码。
 func (r *APIResponse) NormalizeData() {
 	if len(r.Data) == 0 {
 		return
@@ -189,6 +189,75 @@ func (r CancelOrderRequest) toBiz(cfg Config) map[string]interface{} {
 	}
 	if r.ID != nil {
 		biz["id"] = *r.ID
+	}
+	if lang != "" {
+		biz["lang"] = lang
+	}
+	return biz
+}
+
+type OrdersRequest struct {
+	Account       string
+	SecretKey     string
+	Symbol        string
+	SecType       string
+	Market        string
+	Status        string
+	StartTime     *int64
+	EndTime       *int64
+	Limit         *int
+	NextPageToken string
+	SegType       string
+	Language      string
+}
+
+func (r OrdersRequest) toBiz(cfg Config) map[string]interface{} {
+	account := r.Account
+	if account == "" {
+		account = cfg.Account
+	}
+	secret := r.SecretKey
+	if secret == "" {
+		secret = cfg.SecretKey
+	}
+	lang := r.Language
+	if lang == "" {
+		lang = cfg.Lang
+	}
+
+	biz := map[string]interface{}{}
+	if account != "" {
+		biz["account"] = account
+	}
+	if secret != "" {
+		biz["secret_key"] = secret
+	}
+	if r.Symbol != "" {
+		biz["symbol"] = r.Symbol
+	}
+	if r.SecType != "" {
+		biz["sec_type"] = r.SecType
+	}
+	if r.Market != "" {
+		biz["market"] = r.Market
+	}
+	if r.Status != "" {
+		biz["status"] = r.Status
+	}
+	if r.StartTime != nil {
+		biz["start_time"] = *r.StartTime
+	}
+	if r.EndTime != nil {
+		biz["end_time"] = *r.EndTime
+	}
+	if r.Limit != nil {
+		biz["limit"] = *r.Limit
+	}
+	if r.NextPageToken != "" {
+		biz["next_page_token"] = r.NextPageToken
+	}
+	if r.SegType != "" {
+		biz["seg_type"] = r.SegType
 	}
 	if lang != "" {
 		biz["lang"] = lang
@@ -453,6 +522,17 @@ type OrderResult struct {
 	Order    OrderIDData
 }
 
+type OrdersData struct {
+	Items         []json.RawMessage
+	NextPageToken string
+	IsSuccess     bool
+}
+
+type OrdersResult struct {
+	Response APIResponse
+	Orders   OrdersData
+}
+
 func (a *AssetsData) attachRawFrom(wrapper assetsWrapper) error {
 	a.IsSuccess = wrapper.IsSuccess
 	for _, raw := range wrapper.Items {
@@ -487,4 +567,10 @@ type assetsWrapper struct {
 type positionsWrapper struct {
 	Items     []json.RawMessage `json:"items"`
 	IsSuccess bool              `json:"is_success"`
+}
+
+type ordersWrapper struct {
+	Items         []json.RawMessage `json:"items"`
+	NextPageToken string            `json:"nextPageToken"`
+	IsSuccess     bool              `json:"is_success"`
 }

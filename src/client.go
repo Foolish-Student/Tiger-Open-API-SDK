@@ -23,12 +23,12 @@ const (
 	defaultUserAgent = "openapi-go-sdk-0.1.0"
 )
 
-// Config carries connection settings.
+// Config 保存连接配置。
 type Config struct {
 	TigerID        string
 	Account        string
 	SecretKey      string
-	PrivateKey     string // RSA key, with or without PEM markers.
+	PrivateKey     string // RSA 密钥，可包含或不包含 PEM 标记。
 	TigerPublicKey string
 	ServerURL      string
 	DeviceID       string
@@ -42,7 +42,7 @@ type Config struct {
 	HTTPClient     *http.Client
 }
 
-// Client executes signed OpenAPI requests.
+// Client 执行带签名的 OpenAPI 请求。
 type Client struct {
 	cfg        Config
 	privateKey *rsa.PrivateKey
@@ -50,7 +50,7 @@ type Client struct {
 	userAgent  string
 }
 
-// NewClient builds a Client from Config.
+// NewClient 使用 Config 创建 Client。
 func NewClient(cfg Config) (*Client, error) {
 	if cfg.TigerID == "" {
 		return nil, errors.New("tiger_id is required")
@@ -98,7 +98,7 @@ func NewClient(cfg Config) (*Client, error) {
 	}, nil
 }
 
-// GetAssets queries account assets.
+// GetAssets 查询账户资产。
 func (c *Client) GetAssets(ctx context.Context, req AssetsRequest) (*AssetsResult, error) {
 	biz := req.toBiz(c.cfg)
 	resp, err := c.call(ctx, "assets", biz)
@@ -119,7 +119,7 @@ func (c *Client) GetAssets(ctx context.Context, req AssetsRequest) (*AssetsResul
 	return &AssetsResult{Response: resp, Assets: AssetsData{}}, nil
 }
 
-// GetPositions queries current positions.
+// GetPositions 查询当前持仓。
 func (c *Client) GetPositions(ctx context.Context, req PositionsRequest) (*PositionsResult, error) {
 	biz := req.toBiz(c.cfg)
 	resp, err := c.call(ctx, "positions", biz)
@@ -140,7 +140,7 @@ func (c *Client) GetPositions(ctx context.Context, req PositionsRequest) (*Posit
 	return &PositionsResult{Response: resp, Positions: PositionsData{}}, nil
 }
 
-// PlaceOrder submits an order and returns the global order id.
+// PlaceOrder 提交订单并返回全局订单 ID。
 func (c *Client) PlaceOrder(ctx context.Context, order Order) (*OrderResult, error) {
 	biz := order.toBiz(c.cfg)
 	resp, err := c.call(ctx, "place_order", biz)
@@ -161,7 +161,7 @@ func (c *Client) PlaceOrder(ctx context.Context, order Order) (*OrderResult, err
 	return result, nil
 }
 
-// CancelOrder cancels an order by global id or account order id.
+// CancelOrder 根据全局 ID 或账户订单 ID 撤单。
 func (c *Client) CancelOrder(ctx context.Context, req CancelOrderRequest) (*OrderResult, error) {
 	biz := req.toBiz(c.cfg)
 	resp, err := c.call(ctx, "cancel_order", biz)
@@ -180,6 +180,36 @@ func (c *Client) CancelOrder(ctx context.Context, req CancelOrderRequest) (*Orde
 		return result, fmt.Errorf("cancel rejected code=%s msg=%s", payload.Code, payload.Message)
 	}
 	return result, nil
+}
+
+// GetOrders 拉取账户订单列表（默认返回当天数据，可通过时间与分页参数扩展）。
+func (c *Client) GetOrders(ctx context.Context, req OrdersRequest) (*OrdersResult, error) {
+	biz := req.toBiz(c.cfg)
+	resp, err := c.call(ctx, "orders", biz)
+	if err != nil {
+		return nil, err
+	}
+
+	var wrapper ordersWrapper
+	if len(resp.Data) > 0 {
+		if err := json.Unmarshal(resp.Data, &wrapper); err != nil {
+			// 兼容 data 直接为数组的场景。
+			var items []json.RawMessage
+			if errArray := json.Unmarshal(resp.Data, &items); errArray != nil {
+				return nil, fmt.Errorf("decode orders data: %w", err)
+			}
+			wrapper.Items = items
+		}
+	}
+
+	return &OrdersResult{
+		Response: resp,
+		Orders: OrdersData{
+			Items:         wrapper.Items,
+			NextPageToken: wrapper.NextPageToken,
+			IsSuccess:     wrapper.IsSuccess,
+		},
+	}, nil
 }
 
 func (c *Client) call(ctx context.Context, method string, biz map[string]interface{}) (APIResponse, error) {
@@ -306,7 +336,7 @@ func marshalRequestBody(params map[string]interface{}) ([]byte, error) {
 	return []byte(encoded), nil
 }
 
-// marshalBizContent matches the python sdk: sort keys and compact separators.
+// marshalBizContent 与 python sdk 保持一致：按键排序并使用紧凑分隔符。
 func marshalBizContent(biz map[string]interface{}) (string, error) {
 	return marshalDeterministic(biz)
 }
