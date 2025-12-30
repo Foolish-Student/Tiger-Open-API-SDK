@@ -155,8 +155,11 @@ func (c *Client) PlaceOrder(ctx context.Context, order Order) (*OrderResult, err
 		payload.normalize()
 	}
 	result := &OrderResult{Response: resp, Order: payload}
-	if payload.Code != "" && payload.Code != "0" {
-		return result, fmt.Errorf("order rejected code=%s msg=%s", payload.Code, payload.Message)
+	if resp.Code != 0 {
+		return result, fmt.Errorf("order rejected code=%d msg=%s", resp.Code, resp.Message)
+	}
+	if payload.Code != 0 {
+		return result, fmt.Errorf("order rejected code=%d msg=%s", payload.Code, payload.Message)
 	}
 	return result, nil
 }
@@ -176,8 +179,11 @@ func (c *Client) CancelOrder(ctx context.Context, req CancelOrderRequest) (*Orde
 		payload.normalize()
 	}
 	result := &OrderResult{Response: resp, Order: payload}
-	if payload.Code != "" && payload.Code != "0" {
-		return result, fmt.Errorf("cancel rejected code=%s msg=%s", payload.Code, payload.Message)
+	if resp.Code != 0 {
+		return result, fmt.Errorf("cancel rejected code=%d msg=%s", resp.Code, resp.Message)
+	}
+	if payload.Code != 0 {
+		return result, fmt.Errorf("cancel rejected code=%d msg=%s", payload.Code, payload.Message)
 	}
 	return result, nil
 }

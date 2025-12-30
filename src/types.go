@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 )
 
 // APIResponse 映射老虎返回的响应包结构。
@@ -491,13 +492,46 @@ type Position struct {
 	Raw           json.RawMessage `json:"-"`
 }
 
+// IntOrString allows numeric codes encoded as numbers or quoted strings.
+type IntOrString int
+
+func (v *IntOrString) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		*v = 0
+		return nil
+	}
+	if trimmed[0] == '"' {
+		var s string
+		if err := json.Unmarshal(trimmed, &s); err != nil {
+			return err
+		}
+		if s == "" {
+			*v = 0
+			return nil
+		}
+		i, err := strconv.Atoi(s)
+		if err != nil {
+			return err
+		}
+		*v = IntOrString(i)
+		return nil
+	}
+	var i int
+	if err := json.Unmarshal(trimmed, &i); err != nil {
+		return err
+	}
+	*v = IntOrString(i)
+	return nil
+}
+
 type OrderIDData struct {
 	OrderID    int64           `json:"orderId,omitempty"`
 	AltOrderID int64           `json:"order_id,omitempty"`
 	ID         int64           `json:"id,omitempty"`
 	SubIDs     []int64         `json:"subIds,omitempty"`
 	Orders     json.RawMessage `json:"orders,omitempty"`
-	Code       string          `json:"code,omitempty"`
+	Code       IntOrString     `json:"code,omitempty"`
 	Message    string          `json:"message,omitempty"`
 }
 
